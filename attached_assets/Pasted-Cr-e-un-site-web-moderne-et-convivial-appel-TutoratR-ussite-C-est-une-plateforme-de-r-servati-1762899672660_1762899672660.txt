@@ -1,0 +1,46 @@
+Crée un site web moderne et convivial appelé “TutoratRéussite”.  
+C’est une plateforme de réservation de cours particuliers pour élèves du primaire (1 à 6) et du secondaire (1 à 5) au Québec.  
+Le design doit être clair, professionnel et chaleureux, adapté aux parents et aux élèves.
+
+🎨 Structure du site :
+1. **Accueil** — phrase d’accroche, présentation du service, bouton “Réserver un cours”.
+2. **Réservation** — un formulaire simple sans inscription :
+   - Champs : prénom, nom, téléphone, e-mail.
+   - Choix du niveau scolaire (primaire 1–6 / secondaire 1–5).
+   - Choix de la durée (1h, 1h30, 2h).
+   - Choix du lieu (chez le professeur ou à domicile).
+   - Si “à domicile”, demander l’adresse complète.
+   - Afficher le prix automatiquement selon le niveau, la durée et le lieu (voir grille tarifaire ci-dessous).
+   - Quand un créneau est réservé, il disparaît du calendrier.
+   - Envoi automatique d’un e-mail de confirmation au client avec les détails.
+3. **Forfaits** — page dédiée affichant les forfaits mensuels :
+   - Option 1 séance/semaine (4 séances/mois).
+   - Option 2 séances/semaine (8 séances/mois).
+   - Prix barrés avec promotions selon la grille ci-dessous.
+   - Petits badges “Économie de X $” visibles.
+4. **Contact** — mes coordonnées (adresse, téléphone, e-mail).
+
+💰 Tarifs à la séance :
+- Primaire (1 à 6)
+  - Chez le professeur : 35 $/h (1h30 = 50 $, 2h = 65 $)
+  - À domicile : 40 $/h (1h30 = 60 $, 2h = 80 $)
+- Secondaire (1 à 5)
+  - Chez le professeur : 40 $/h (1h30 = 55 $, 2h = 70 $)
+  - À domicile : 45 $/h (1h30 = 65 $, 2h = 90 $)
+
+📆 Forfaits mensuels :
+- Afficher dans un tableau clair les prix pour 1 séance/semaine (4 cours) et 2 séances/semaine (8 cours), avec économies visibles selon la grille suivante :
+  - Primaire chez le professeur : 120 $, 175 $, 220 $ / 230 $, 340 $, 440 $
+  - Primaire à domicile : 145 $, 210 $, 270 $ / 285 $, 420 $, 550 $
+  - Secondaire chez le professeur : 140 $, 190 $, 240 $ / 270 $, 370 $, 470 $
+  - Secondaire à domicile : 165 $, 230 $, 310 $ / 320 $, 450 $, 610 $
+
+✨ Promotions marketing :
+-- −15 % si deux enfants de la même famille s’inscrivent
+-- 30 dollars rabais pour les abonnements trimestriels
+
+Ajoute une interface claire, intuitive et responsive (mobile-friendly).  
+Utilise un style professionnel avec des couleur
+s douces (bleu clair, blanc, touches d’orange).  
+Mets les prix barrés pour les forfaits en promotion et affiche les réductions en vert.
+
