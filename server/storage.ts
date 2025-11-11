@@ -1,37 +1,99 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type Booking, type InsertBooking, type TimeSlot, type InsertTimeSlot } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createBooking(booking: InsertBooking): Promise<Booking>;
+  getBookings(): Promise<Booking[]>;
+  getBookingById(id: string): Promise<Booking | undefined>;
+  
+  getAvailableTimeSlots(): Promise<TimeSlot[]>;
+  createTimeSlot(timeSlot: InsertTimeSlot): Promise<TimeSlot>;
+  markTimeSlotAsBooked(dateTime: Date): Promise<void>;
+  initializeTimeSlots(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private bookings: Map<string, Booking>;
+  private timeSlots: Map<string, TimeSlot>;
 
   constructor() {
-    this.users = new Map();
+    this.bookings = new Map();
+    this.timeSlots = new Map();
+    this.initializeTimeSlots();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async initializeTimeSlots(): Promise<void> {
+    const now = new Date();
+    const slots: Date[] = [];
+
+    for (let day = 1; day <= 30; day++) {
+      const date = new Date(now);
+      date.setDate(now.getDate() + day);
+      
+      [9, 10, 11, 13, 14, 15, 16, 17, 18, 19].forEach((hour) => {
+        const slotDate = new Date(date);
+        slotDate.setHours(hour, 0, 0, 0);
+        slots.push(slotDate);
+      });
+    }
+
+    for (const slotDate of slots) {
+      const id = randomUUID();
+      const timeSlot: TimeSlot = {
+        id,
+        dateTime: slotDate,
+        isBooked: 0,
+      };
+      this.timeSlots.set(id, timeSlot);
+    }
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createBooking(insertBooking: InsertBooking): Promise<Booking> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const booking: Booking = {
+      ...insertBooking,
+      id,
+      createdAt: new Date(),
+    };
+    this.bookings.set(id, booking);
+    
+    await this.markTimeSlotAsBooked(insertBooking.dateTime);
+    
+    return booking;
+  }
+
+  async getBookings(): Promise<Booking[]> {
+    return Array.from(this.bookings.values());
+  }
+
+  async getBookingById(id: string): Promise<Booking | undefined> {
+    return this.bookings.get(id);
+  }
+
+  async getAvailableTimeSlots(): Promise<TimeSlot[]> {
+    return Array.from(this.timeSlots.values()).filter((slot) => slot.isBooked === 0);
+  }
+
+  async createTimeSlot(insertTimeSlot: InsertTimeSlot): Promise<TimeSlot> {
+    const id = randomUUID();
+    const timeSlot: TimeSlot = {
+      ...insertTimeSlot,
+      id,
+      isBooked: insertTimeSlot.isBooked ?? 0,
+    };
+    this.timeSlots.set(id, timeSlot);
+    return timeSlot;
+  }
+
+  async markTimeSlotAsBooked(dateTime: Date): Promise<void> {
+    const slot = Array.from(this.timeSlots.values()).find(
+      (s) => s.dateTime.getTime() === dateTime.getTime()
+    );
+    
+    if (slot) {
+      slot.isBooked = 1;
+      this.timeSlots.set(slot.id, slot);
+    }
   }
 }
 
