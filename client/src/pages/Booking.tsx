@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar as CalendarIcon, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -14,9 +14,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { calculatePrice } from "@/lib/pricing";
-import { apiRequest, queryClient } from "@/lib/queryClient";
 
 const bookingFormSchema = z.object({
   firstName: z.string().min(1, "Le prénom est requis"),
@@ -24,10 +24,11 @@ const bookingFormSchema = z.object({
   phone: z.string().min(10, "Le numéro de téléphone doit contenir au moins 10 chiffres"),
   email: z.string().email("L'adresse courriel est invalide"),
   gradeLevel: z.string().min(1, "Le niveau scolaire est requis"),
+  subject: z.enum(["math", "science"], { required_error: "La matière est requise" }),
   duration: z.enum(["1h", "1h30", "2h"], { required_error: "La durée est requise" }),
   location: z.enum(["teacher", "home"], { required_error: "Le lieu est requis" }),
   address: z.string().optional(),
-  dateTime: z.date({ required_error: "La date et l'heure sont requises" }),
+  requestedStartTime: z.date({ required_error: "La date et l'heure sont requises" }),
 }).refine((data) => {
   if (data.location === "home" && !data.address) {
     return false;
@@ -43,6 +44,9 @@ type BookingFormValues = z.infer<typeof bookingFormSchema>;
 export default function Booking() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>();
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
+  const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string; startDateTime: string }>>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
@@ -52,6 +56,7 @@ export default function Booking() {
       phone: "",
       email: "",
       gradeLevel: "",
+      subject: undefined,
       duration: undefined,
       location: undefined,
       address: "",
@@ -75,9 +80,33 @@ export default function Booking() {
 
   const currentPrice = calculateCurrentPrice();
 
-  const { data: availableSlots, isLoading: loadingSlots } = useQuery<Date[]>({
-    queryKey: ["/api/time-slots"],
-  });
+  useEffect(() => {
+    if (selectedDate && watchDuration) {
+      fetchAvailableSlots(selectedDate, watchDuration);
+    } else {
+      setAvailableSlots([]);
+      setSelectedTimeSlot("");
+    }
+  }, [selectedDate, watchDuration]);
+
+  const fetchAvailableSlots = async (date: Date, duration: string) => {
+    setLoadingSlots(true);
+    try {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      const response = await fetch(`/api/time-slots?date=${dateStr}&duration=${duration}`);
+      const slots = await response.json();
+      setAvailableSlots(slots);
+    } catch (error) {
+      console.error("Error fetching time slots:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les créneaux disponibles.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
 
   const bookingMutation = useMutation({
     mutationFn: async (data: BookingFormValues) => {
@@ -88,24 +117,36 @@ export default function Booking() {
         location: data.location,
       });
 
-      return apiRequest("POST", "/api/bookings", {
-        ...data,
-        price,
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          price,
+        }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erreur lors de la réservation");
+      }
+
+      return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/time-slots"] });
+    onSuccess: (data) => {
       toast({
-        title: "Réservation confirmée !",
-        description: "Un courriel de confirmation vous a été envoyé.",
+        title: "✅ Réservation confirmée !",
+        description: data.message,
       });
       form.reset();
       setSelectedDate(undefined);
+      setSelectedTimeSlot("");
+      setAvailableSlots([]);
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la réservation.",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -115,11 +156,41 @@ export default function Booking() {
     bookingMutation.mutate(data);
   };
 
-  const isSlotAvailable = (date: Date) => {
-    if (!availableSlots) return false;
-    return availableSlots.some(
-      (slot) => new Date(slot).toISOString() === date.toISOString()
-    );
+  const getAvailableTimesForDate = () => {
+    if (!selectedDate || !availableSlots.length) return [];
+    
+    const normalizedDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    
+    return availableSlots
+      .filter((slot) => {
+        const slotDate = new Date(slot.startDateTime);
+        const normalizedSlot = new Date(slotDate.getFullYear(), slotDate.getMonth(), slotDate.getDate());
+        return normalizedSlot.getTime() === normalizedDate.getTime();
+      })
+      .map((slot) => {
+        const slotDate = new Date(slot.startDateTime);
+        return {
+          time: format(slotDate, "HH:mm", { locale: fr }),
+          datetime: slotDate,
+        };
+      })
+      .sort((a, b) => a.datetime.getTime() - b.datetime.getTime());
+  };
+
+  const availableTimes = getAvailableTimesForDate();
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    setSelectedTimeSlot("");
+    form.setValue("requestedStartTime", undefined as any);
+  };
+
+  const handleTimeSlotSelect = (slotKey: string) => {
+    setSelectedTimeSlot(slotKey);
+    const slot = availableSlots.find((s) => `${s.start}-${s.end}` === slotKey);
+    if (slot) {
+      form.setValue("requestedStartTime", new Date(slot.startDateTime));
+    }
   };
 
   return (
@@ -136,7 +207,7 @@ export default function Booking() {
           <CardHeader>
             <CardTitle>Informations de réservation</CardTitle>
             <CardDescription>
-              Tous les champs sont obligatoires sauf indication contraire
+              Sélectionnez d'abord la durée du cours pour voir les créneaux disponibles
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -204,6 +275,7 @@ export default function Booking() {
 
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Détails du cours</h3>
+                  
                   <FormField
                     control={form.control}
                     name="gradeLevel"
@@ -237,10 +309,42 @@ export default function Booking() {
 
                   <FormField
                     control={form.control}
+                    name="subject"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Matière</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-subject">
+                              <SelectValue placeholder="Sélectionnez la matière" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="math">
+                              <div className="flex items-center gap-2">
+                                <span>🔢</span>
+                                <span>Mathématiques</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="science">
+                              <div className="flex items-center gap-2">
+                                <span>🔬</span>
+                                <span>Sciences</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="duration"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Durée du cours</FormLabel>
+                        <FormLabel>Durée du cours *</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-duration">
@@ -254,6 +358,9 @@ export default function Booking() {
                           </SelectContent>
                         </Select>
                         <FormMessage />
+                        <p className="text-sm text-muted-foreground">
+                          ℹ️ Veuillez sélectionner la durée avant de choisir la date
+                        </p>
                       </FormItem>
                     )}
                   />
@@ -313,44 +420,95 @@ export default function Booking() {
                     />
                   )}
 
-                  <FormField
-                    control={form.control}
-                    name="dateTime"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Date et heure du cours</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant="outline"
-                                className="pl-3 text-left font-normal"
-                                data-testid="button-calendar"
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP 'à' p", { locale: fr })
-                                ) : (
-                                  <span>Sélectionnez une date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              disabled={(date) => !isSlotAvailable(date)}
-                              initialFocus
-                              locale={fr}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {watchDuration && (
+                    <FormField
+                      control={form.control}
+                      name="requestedStartTime"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Date du cours</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className="pl-3 text-left font-normal"
+                                  data-testid="button-calendar"
+                                >
+                                  {selectedDate ? (
+                                    format(selectedDate, "PPP", { locale: fr })
+                                  ) : (
+                                    <span>Sélectionnez une date</span>
+                                  )}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={handleDateSelect}
+                                disabled={(date) => date < new Date()}
+                                initialFocus
+                                locale={fr}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  {selectedDate && watchDuration && (
+                    <div className="space-y-2">
+                      <FormLabel className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Plages horaires disponibles ({watchDuration})
+                      </FormLabel>
+                      
+                      {loadingSlots ? (
+                        <div className="text-center py-4">
+                          <p className="text-muted-foreground">Chargement des plages horaires...</p>
+                        </div>
+                      ) : availableSlots.length > 0 ? (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {availableSlots.map((slot) => {
+                              const slotKey = `${slot.start}-${slot.end}`;
+                              return (
+                                <Button
+                                  key={slotKey}
+                                  type="button"
+                                  variant={selectedTimeSlot === slotKey ? "default" : "outline"}
+                                  className="w-full h-auto py-4 flex flex-col items-center justify-center"
+                                  onClick={() => handleTimeSlotSelect(slotKey)}
+                                >
+                                  <div className="text-lg font-semibold">
+                                    {slot.start} - {slot.end}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-1">
+                                    Durée: {watchDuration}
+                                  </div>
+                                </Button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            💡 Les plages incluent automatiquement 30 min avant et après pour le déplacement
+                          </p>
+                        </>
+                      ) : (
+                        <Alert>
+                          <AlertDescription>
+                            Aucune plage horaire disponible pour cette date avec une durée de {watchDuration}. 
+                            Veuillez choisir une autre date ou une durée différente.
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {currentPrice && (
@@ -373,7 +531,7 @@ export default function Booking() {
                   type="submit"
                   size="lg"
                   className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                  disabled={bookingMutation.isPending}
+                  disabled={bookingMutation.isPending || !selectedTimeSlot}
                   data-testid="button-submit-booking"
                 >
                   {bookingMutation.isPending ? "Réservation en cours..." : "Confirmer la réservation"}

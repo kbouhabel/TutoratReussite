@@ -24,9 +24,9 @@ export default function Home() {
   ];
 
   const stats = [
-    { icon: GraduationCap, value: "10+", label: "Années d'expérience" },
-    { icon: Users, value: "500+", label: "Élèves aidés" },
-    { icon: Award, value: "95%", label: "Taux de réussite" },
+    { icon: GraduationCap, value: "5+", label: "Années d'expérience" },
+    { icon: Users, value: "100+", label: "Élèves aidés" },
+    { icon: Award, value: "3+", label: "Matiéres enseignées" },
   ];
 
   return (

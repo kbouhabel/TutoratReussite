@@ -26,20 +26,7 @@ export default function Packages() {
           </p>
         </div>
 
-        <div className="mb-8 space-y-4">
-          <Alert className="bg-secondary/10 border-secondary/20">
-            <Info className="h-4 w-4 text-secondary" />
-            <AlertDescription className="text-secondary-foreground">
-              <strong>-15% de rabais</strong> si deux enfants de la même famille s'inscrivent
-            </AlertDescription>
-          </Alert>
-          <Alert className="bg-primary/10 border-primary/20">
-            <Info className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-primary-foreground">
-              <strong>30$ de rabais</strong> pour les abonnements trimestriels (3 mois)
-            </AlertDescription>
-          </Alert>
-        </div>
+        
 
         <Tabs value={selectedGrade} onValueChange={(v) => setSelectedGrade(v as "primaire" | "secondaire")} className="mb-6">
           <TabsList className="grid w-full grid-cols-2">
@@ -54,7 +41,20 @@ export default function Packages() {
             <TabsTrigger value="home" data-testid="tab-home">À domicile</TabsTrigger>
           </TabsList>
         </Tabs>
-
+        <div className="mb-8 space-y-4">
+          <Alert className="bg-green-100 border-green-300">
+            <Info className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>-15% de rabais supplémentaires</strong> si deux enfants de la même famille s'inscrivent
+            </AlertDescription>
+          </Alert>
+          <Alert className="bg-green-100 border-green-300">
+            <Info className="h-4 w-4 text-green-600" />
+            <AlertDescription className="text-green-800">
+              <strong>30$ de rabais supplémentaires</strong> aprés 3 mois consécutifs
+            </AlertDescription>
+          </Alert>
+        </div>
         <div className="grid md:grid-cols-2 gap-8 mb-12">
           <Card>
             <CardHeader>
@@ -127,6 +127,17 @@ export default function Packages() {
               ))}
             </CardContent>
           </Card>
+          <div className="mt-12 md:col-span-2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-white p-8 rounded-lg shadow-sm">
+              <h2 className="text-3xl font-bold flex-1">Vous pensez à prendre un forfait ?</h2>
+              
+              <Link href="/contact">
+                <Button variant="outline" size="lg" className="text-xl px-12 py-8 h-auto rounded-full flex items-center justify-center whitespace-nowrap" data-testid="button-contact">
+                  Contactez-Nous
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         <Card className="bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20">
@@ -162,30 +173,12 @@ export default function Packages() {
                   </div>
                 </div>
               </div>
-              <Link href="/reservation">
-                <Button 
-                  size="lg" 
-                  className="bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                  data-testid="button-book-package"
-                >
-                  Choisir ce forfait
-                </Button>
-              </Link>
+              
             </div>
           </CardContent>
         </Card>
 
-        <div className="mt-12 text-center">
-          <h3 className="text-xl font-semibold mb-4">Besoin d'aide pour choisir ?</h3>
-          <p className="text-muted-foreground mb-6">
-            Contactez-nous pour discuter de vos besoins et trouver le forfait idéal
-          </p>
-          <Link href="/contact">
-            <Button variant="outline" size="lg" data-testid="button-contact">
-              Nous contacter
-            </Button>
-          </Link>
-        </div>
+        
       </div>
     </div>
   );

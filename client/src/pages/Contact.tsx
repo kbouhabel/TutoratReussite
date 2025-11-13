@@ -6,25 +6,25 @@ export default function Contact() {
     {
       icon: MapPin,
       title: "Adresse",
-      content: "123 Rue de l'Éducation\nMontréal, QC H2X 1Y1",
+      content: "H1Y 2T5, Montréal, Québec",
       link: null,
     },
     {
       icon: Phone,
       title: "Téléphone",
-      content: "(514) 555-0123",
-      link: "tel:5145550123",
+      content: "(438) 455-9106",
+      link: "tel:+14384559106",
     },
     {
       icon: Mail,
       title: "Courriel",
-      content: "info@tutoratreussite.ca",
-      link: "mailto:info@tutoratreussite.ca",
+      content: "tutoratreussite@gmail.com",
+      link: "mailto:tutoratreussite@gmail.com",
     },
     {
       icon: Clock,
       title: "Horaires",
-      content: "Lundi - Vendredi: 9h - 20h\nSamedi: 9h - 17h\nDimanche: Sur rendez-vous",
+      content: "Tous les jours : 9h30 - 20h",
       link: null,
     },
   ];
@@ -110,10 +110,9 @@ export default function Contact() {
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Vos professeurs sont-ils qualifiés ?</h4>
+                    <h4 className="font-semibold mb-2">Comment bien me préparer avant une séance ?</h4>
                     <p className="text-sm text-muted-foreground">
-                      Tous nos tuteurs sont certifiés et possèdent une expérience pédagogique
-                      vérifiée.
+                      Envoyez au tuteur les chapitres que vous souhaitez aborder par mail et préparez vos questions.
                     </p>
                   </div>
                   <div>

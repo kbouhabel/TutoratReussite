@@ -17,11 +17,14 @@ export default function Navigation() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <nav className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" data-testid="link-home">
-          <span className="text-xl font-bold text-primary cursor-pointer">
-            TutoratRéussite
-          </span>
-        </Link>
+      <Link href="/" data-testid="link-home">
+  <div className="flex items-center gap-2 cursor-pointer">
+    <img src="/logo.png" alt="TutoratRéussite" className="h-20 w-auto" />
+    <span className="text-xl font-bold text-primary">
+      TutoratRéussite
+    </span>
+  </div>
+</Link>
 
         <div className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
@@ -54,6 +57,7 @@ export default function Navigation() {
         </Button>
       </nav>
 
+      {/* Mobile Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden border-t bg-background">
           <div className="container mx-auto px-4 py-4 flex flex-col gap-4">
