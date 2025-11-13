@@ -70,10 +70,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Send confirmation email
+      let emailError = null;
       try {
+        console.log("🔄 Attempting to send confirmation email...");
         await sendBookingConfirmation(result.booking!);
-      } catch (emailError) {
-        console.error("Email sending failed, but booking was created:", emailError);
+        console.log("✅ Email sent successfully");
+      } catch (emailError_) {
+        emailError = emailError_;
+        console.error("❌❌❌ CRITICAL: Email sending failed ❌❌❌");
+        console.error("Error details:", emailError_);
+        console.error("Stack trace:", (emailError_ as Error).stack);
+        // Don't throw - booking is already created
       }
       
       res.status(201).json({
@@ -84,6 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timeStyle: 'short' 
         })}.`,
         booking: result.booking,
+        emailSent: !emailError,
+        emailError: emailError ? String(emailError) : undefined,
       });
     } catch (error: any) {
       console.error("Error creating booking:", error);

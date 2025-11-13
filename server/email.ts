@@ -10,6 +10,15 @@ const __dirname = path.dirname(__filename);
 // Load email template
 function loadEmailTemplate(): string {
   const templatePath = path.join(__dirname, 'templates', 'booking-confirmation.html');
+  
+  // Check if template exists
+  if (!fs.existsSync(templatePath)) {
+    console.error("❌ Email template not found at:", templatePath);
+    console.error("📂 Current directory:", __dirname);
+    console.error("📂 Directory contents:", fs.readdirSync(__dirname));
+    throw new Error(`Email template not found at ${templatePath}`);
+  }
+  
   return fs.readFileSync(templatePath, 'utf-8');
 }
 
@@ -69,8 +78,14 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
   const emailPass = process.env.EMAIL_PASS;
   const adminEmail = "tutoratreussite@gmail.com";
   
+  console.log("📧 Email configuration check:");
+  console.log("  EMAIL_USER:", emailUser ? "✓ Set" : "✗ Missing");
+  console.log("  EMAIL_PASS:", emailPass ? "✓ Set" : "✗ Missing");
+  console.log("  Admin Email:", adminEmail);
+  
   if (!emailUser || !emailPass) {
-    console.log("⚠️  Email credentials not configured. Skipping email send.");
+    const errorMsg = "⚠️  Email credentials not configured. EMAIL_USER and EMAIL_PASS environment variables are required.";
+    console.error(errorMsg);
     console.log("📋 Booking details:", {
       name: `${booking.firstName} ${booking.lastName}`,
       email: booking.email,
@@ -80,9 +95,10 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
       location: booking.location,
       price: booking.price,
     });
-    return;
+    throw new Error(errorMsg);
   }
 
+  console.log("📧 Creating email transporter...");
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
@@ -91,7 +107,17 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
     },
   });
 
+  // Verify transporter configuration
+  try {
+    await transporter.verify();
+    console.log("✅ Email transporter verified successfully");
+  } catch (verifyError) {
+    console.error("❌ Email transporter verification failed:", verifyError);
+    throw new Error(`Email configuration is invalid: ${verifyError}`);
+  }
+
   // Load and fill template
+  console.log("📝 Loading email template...");
   const template = loadEmailTemplate();
   const emailHtml = fillTemplate(template, booking);
   
@@ -112,6 +138,7 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
   };
 
   try {
+    console.log("📤 Sending emails...");
     // Send both emails
     await Promise.all([
       transporter.sendMail(clientMailOptions),
@@ -122,6 +149,7 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
     console.log("✅ Admin notification sent successfully to:", adminEmail);
   } catch (error) {
     console.error("❌ Error sending email:", error);
+    console.error("❌ Error details:", JSON.stringify(error, null, 2));
     throw error;
   }
 }
