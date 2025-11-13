@@ -109,23 +109,49 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
     
     // Send to client
     const clientEmail = await resend.emails.send({
-      from: 'TutoratRéussite <onboarding@resend.dev>', // Change this after domain verification
+      from: 'TutoratRéussite <onboarding@resend.dev>',
+      replyTo: 'tutoratreussite@gmail.com',
       to: booking.email,
       subject: "✅ Confirmation de réservation - TutoratRéussite",
       html: emailHtml,
     });
 
-    console.log("✅ Confirmation email sent to client:", booking.email, "ID:", clientEmail.data?.id);
+    console.log("📧 Client email response:", JSON.stringify(clientEmail, null, 2));
+    
+    if (clientEmail.error) {
+      console.error("❌ Error sending client email:", clientEmail.error);
+      throw new Error(`Failed to send client email: ${JSON.stringify(clientEmail.error)}`);
+    }
+    
+    if (!clientEmail.data?.id) {
+      console.error("⚠️ No email ID returned. Full response:", clientEmail);
+      throw new Error("Email sent but no ID returned - check Resend API key permissions");
+    }
+
+    console.log("✅ Confirmation email sent to client:", booking.email, "ID:", clientEmail.data.id);
 
     // Send to admin
     const adminEmailResult = await resend.emails.send({
-      from: 'TutoratRéussite <onboarding@resend.dev>', // Change this after domain verification
+      from: 'TutoratRéussite <onboarding@resend.dev>',
+      replyTo: 'tutoratreussite@gmail.com',
       to: adminEmail,
       subject: `📚 Nouvelle réservation - ${booking.firstName} ${booking.lastName}`,
       html: emailHtml,
     });
 
-    console.log("✅ Admin notification sent to:", adminEmail, "ID:", adminEmailResult.data?.id);
+    console.log("📧 Admin email response:", JSON.stringify(adminEmailResult, null, 2));
+    
+    if (adminEmailResult.error) {
+      console.error("❌ Error sending admin email:", adminEmailResult.error);
+      throw new Error(`Failed to send admin email: ${JSON.stringify(adminEmailResult.error)}`);
+    }
+    
+    if (!adminEmailResult.data?.id) {
+      console.error("⚠️ No email ID returned for admin. Full response:", adminEmailResult);
+      throw new Error("Admin email sent but no ID returned - check Resend API key permissions");
+    }
+
+    console.log("✅ Admin notification sent to:", adminEmail, "ID:", adminEmailResult.data.id);
   } catch (error) {
     console.error("❌ Error sending email via Resend:", error);
     console.error("❌ Error details:", JSON.stringify(error, null, 2));
