@@ -1,7 +1,7 @@
 export interface PricingConfig {
   grade: "primaire" | "secondaire";
   duration: "1h" | "1h30" | "2h";
-  location: "teacher" | "home";
+  location: "teacher" | "home" | "online";
 }
 
 export function calculatePrice(config: PricingConfig): number {
@@ -11,10 +11,12 @@ export function calculatePrice(config: PricingConfig): number {
     primaire: {
       teacher: { "1h": 35, "1h30": 50, "2h": 65 },
       home: { "1h": 40, "1h30": 60, "2h": 80 },
+      online: { "1h": 35, "1h30": 50, "2h": 65 }, // Même tarif que "teacher"
     },
     secondaire: {
       teacher: { "1h": 40, "1h30": 55, "2h": 70 },
       home: { "1h": 45, "1h30": 65, "2h": 90 },
+      online: { "1h": 40, "1h30": 55, "2h": 70 }, // Même tarif que "teacher"
     },
   };
 
@@ -31,7 +33,7 @@ export interface PackagePrice {
 
 export function getPackagePrices(
   grade: "primaire" | "secondaire",
-  location: "teacher" | "home"
+  location: "teacher" | "home" | "online"
 ): PackagePrice[] {
   const packages = {
     primaire: {
@@ -51,6 +53,14 @@ export function getPackagePrices(
         { duration: "1h30" as const, sessionsPerWeek: 2 as const, packagePrice: 420 },
         { duration: "2h" as const, sessionsPerWeek: 2 as const, packagePrice: 550 },
       ],
+      online: [
+        { duration: "1h" as const, sessionsPerWeek: 1 as const, packagePrice: 120 },
+        { duration: "1h30" as const, sessionsPerWeek: 1 as const, packagePrice: 175 },
+        { duration: "2h" as const, sessionsPerWeek: 1 as const, packagePrice: 220 },
+        { duration: "1h" as const, sessionsPerWeek: 2 as const, packagePrice: 230 },
+        { duration: "1h30" as const, sessionsPerWeek: 2 as const, packagePrice: 340 },
+        { duration: "2h" as const, sessionsPerWeek: 2 as const, packagePrice: 440 },
+      ],
     },
     secondaire: {
       teacher: [
@@ -68,6 +78,14 @@ export function getPackagePrices(
         { duration: "1h" as const, sessionsPerWeek: 2 as const, packagePrice: 320 },
         { duration: "1h30" as const, sessionsPerWeek: 2 as const, packagePrice: 450 },
         { duration: "2h" as const, sessionsPerWeek: 2 as const, packagePrice: 610 },
+      ],
+      online: [
+        { duration: "1h" as const, sessionsPerWeek: 1 as const, packagePrice: 140 },
+        { duration: "1h30" as const, sessionsPerWeek: 1 as const, packagePrice: 190 },
+        { duration: "2h" as const, sessionsPerWeek: 1 as const, packagePrice: 240 },
+        { duration: "1h" as const, sessionsPerWeek: 2 as const, packagePrice: 270 },
+        { duration: "1h30" as const, sessionsPerWeek: 2 as const, packagePrice: 370 },
+        { duration: "2h" as const, sessionsPerWeek: 2 as const, packagePrice: 470 },
       ],
     },
   };

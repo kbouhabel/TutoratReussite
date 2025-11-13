@@ -10,14 +10,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { date, duration } = req.query;
       
-      if (!date || !duration) {
-        return res.status(400).json({ error: "Date et durée sont requises" });
+      if (!date) {
+        return res.status(400).json({ error: "La date est requise" });
       }
       
       const requestedDate = new Date(date as string);
-      const slots = await storage.getAvailableTimeSlots(requestedDate, duration as string);
       
-      res.json(slots);
+      // If duration is provided, use the old method (backward compatible)
+      if (duration) {
+        const slots = await storage.getAvailableTimeSlots(requestedDate, duration as string);
+        return res.json(slots);
+      }
+      
+      // If no duration, return all available slots for all durations
+      const allSlots = await storage.getAllAvailableTimeSlots(requestedDate);
+      res.json(allSlots);
     } catch (error: any) {
       console.error("Error fetching time slots:", error);
       res.status(500).json({ error: error.message });

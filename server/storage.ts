@@ -75,6 +75,7 @@ export interface IStorage {
   getBookings(): Promise<Booking[]>;
   getBookingById(id: string): Promise<Booking | undefined>;
   getAvailableTimeSlots(date: Date, duration: string): Promise<Array<{ start: string; end: string; startDateTime: Date }>>;
+  getAllAvailableTimeSlots(date: Date): Promise<Array<{ start: string; end: string; startDateTime: Date; duration: string; durationMinutes: number }>>;
   checkAvailability(requestedStart: Date, requestedEnd: Date): Promise<{ available: boolean; reason?: string; nextAvailable?: Date }>;
   cancelBooking(id: string): Promise<void>;
 }
@@ -199,6 +200,32 @@ export class DatabaseStorage implements IStorage {
     }
     
     return availableSlots;
+  }
+
+  async getAllAvailableTimeSlots(date: Date): Promise<Array<{ start: string; end: string; startDateTime: Date; duration: string; durationMinutes: number }>> {
+    const allAvailableSlots: Array<{ start: string; end: string; startDateTime: Date; duration: string; durationMinutes: number }> = [];
+    
+    // Define all possible durations
+    const durations = ["1h", "1h30", "2h"];
+    
+    // For each duration, get available slots and add duration info
+    for (const duration of durations) {
+      const slotsForDuration = await this.getAvailableTimeSlots(date, duration);
+      
+      // Transform each slot to include duration information
+      for (const slot of slotsForDuration) {
+        allAvailableSlots.push({
+          ...slot,
+          duration,
+          durationMinutes: durationToMinutes(duration),
+        });
+      }
+    }
+    
+    // Sort by start time
+    allAvailableSlots.sort((a, b) => a.startDateTime.getTime() - b.startDateTime.getTime());
+    
+    return allAvailableSlots;
   }
 }
 

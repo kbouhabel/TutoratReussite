@@ -98,7 +98,7 @@ export const insertBookingSchema = createInsertSchema(bookings).omit({
   ]),
   subject: z.enum(["math", "science"], { required_error: "La matière est requise" }),
   duration: z.enum(["1h", "1h30", "2h"], { required_error: "La durée est requise" }),
-  location: z.enum(["teacher", "home", "inperson-free"], { required_error: "Le lieu est requis" }),
+  location: z.enum(["teacher", "home", "online"], { required_error: "Le lieu est requis" }),
   address: z.string().optional(),
   price: z.number().min(0), // Changed from positive() to min(0) to allow 0
   requestedStartTime: z.date(), // The time the user wants to book

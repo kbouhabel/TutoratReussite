@@ -26,7 +26,7 @@ const bookingFormSchema = z.object({
   gradeLevel: z.string().min(1, "Le niveau scolaire est requis"),
   subject: z.enum(["math", "science"], { required_error: "La matière est requise" }),
   duration: z.enum(["1h", "1h30", "2h"], { required_error: "La durée est requise" }),
-  location: z.enum(["teacher", "home"], { required_error: "Le lieu est requis" }),
+  location: z.enum(["teacher", "home", "online"], { required_error: "Le lieu est requis" }),
   address: z.string().optional(),
   requestedStartTime: z.date({ required_error: "La date et l'heure sont requises" }),
 }).refine((data) => {
@@ -45,7 +45,7 @@ export default function Booking() {
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
-  const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string; startDateTime: string }>>([]);
+  const [availableSlots, setAvailableSlots] = useState<Array<{ start: string; end: string; startDateTime: Date; duration: string; durationMinutes: number }>>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const form = useForm<BookingFormValues>({
@@ -81,19 +81,19 @@ export default function Booking() {
   const currentPrice = calculateCurrentPrice();
 
   useEffect(() => {
-    if (selectedDate && watchDuration) {
-      fetchAvailableSlots(selectedDate, watchDuration);
+    if (selectedDate) {
+      fetchAvailableSlots(selectedDate);
     } else {
       setAvailableSlots([]);
       setSelectedTimeSlot("");
     }
-  }, [selectedDate, watchDuration]);
+  }, [selectedDate]);
 
-  const fetchAvailableSlots = async (date: Date, duration: string) => {
+  const fetchAvailableSlots = async (date: Date) => {
     setLoadingSlots(true);
     try {
       const dateStr = format(date, 'yyyy-MM-dd');
-      const response = await fetch(`/api/time-slots?date=${dateStr}&duration=${duration}`);
+      const response = await fetch(`/api/time-slots?date=${dateStr}`);
       const slots = await response.json();
       setAvailableSlots(slots);
     } catch (error) {
@@ -185,12 +185,11 @@ export default function Booking() {
     form.setValue("requestedStartTime", undefined as any);
   };
 
-  const handleTimeSlotSelect = (slotKey: string) => {
+  const handleTimeSlotSelect = (slot: { start: string; end: string; startDateTime: Date; duration: string }) => {
+    const slotKey = `${slot.start}-${slot.end}-${slot.duration}`;
     setSelectedTimeSlot(slotKey);
-    const slot = availableSlots.find((s) => `${s.start}-${s.end}` === slotKey);
-    if (slot) {
-      form.setValue("requestedStartTime", new Date(slot.startDateTime));
-    }
+    form.setValue("requestedStartTime", new Date(slot.startDateTime));
+    form.setValue("duration", slot.duration as "1h" | "1h30" | "2h");
   };
 
   return (
@@ -207,7 +206,7 @@ export default function Booking() {
           <CardHeader>
             <CardTitle>Informations de réservation</CardTitle>
             <CardDescription>
-              Sélectionnez d'abord la durée du cours pour voir les créneaux disponibles
+              Sélectionnez d'abord la matière pour voir les créneaux disponibles
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -341,32 +340,6 @@ export default function Booking() {
 
                   <FormField
                     control={form.control}
-                    name="duration"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Durée du cours *</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-duration">
-                              <SelectValue placeholder="Sélectionnez la durée" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="1h">1 heure</SelectItem>
-                            <SelectItem value="1h30">1 heure 30</SelectItem>
-                            <SelectItem value="2h">2 heures</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                        <p className="text-sm text-muted-foreground">
-                          ℹ️ Veuillez sélectionner la durée avant de choisir la date
-                        </p>
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
                     name="location"
                     render={({ field }) => (
                       <FormItem className="space-y-3">
@@ -391,6 +364,14 @@ export default function Booking() {
                               </FormControl>
                               <FormLabel className="font-normal cursor-pointer">
                                 À domicile
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="online" data-testid="radio-online" />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer">
+                                En ligne 
                               </FormLabel>
                             </FormItem>
                           </RadioGroup>
@@ -420,76 +401,74 @@ export default function Booking() {
                     />
                   )}
 
-                  {watchDuration && (
-                    <FormField
-                      control={form.control}
-                      name="requestedStartTime"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Date du cours</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  className="pl-3 text-left font-normal"
-                                  data-testid="button-calendar"
-                                >
-                                  {selectedDate ? (
-                                    format(selectedDate, "PPP", { locale: fr })
-                                  ) : (
-                                    <span>Sélectionnez une date</span>
-                                  )}
-                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="single"
-                                selected={selectedDate}
-                                onSelect={handleDateSelect}
-                                disabled={(date) => date < new Date()}
-                                initialFocus
-                                locale={fr}
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
+                  <FormField
+                    control={form.control}
+                    name="requestedStartTime"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <FormLabel>Date du cours</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                className="pl-3 text-left font-normal"
+                                data-testid="button-calendar"
+                              >
+                                {selectedDate ? (
+                                  format(selectedDate, "PPP", { locale: fr })
+                                ) : (
+                                  <span>Sélectionnez une date</span>
+                                )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={handleDateSelect}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                              locale={fr}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                  {selectedDate && watchDuration && (
+                  {selectedDate && (
                     <div className="space-y-2">
                       <FormLabel className="flex items-center gap-2">
                         <Clock className="h-4 w-4" />
-                        Plages horaires disponibles ({watchDuration})
+                        Créneaux horaires disponibles (toutes durées)
                       </FormLabel>
                       
                       {loadingSlots ? (
                         <div className="text-center py-4">
-                          <p className="text-muted-foreground">Chargement des plages horaires...</p>
+                          <p className="text-muted-foreground">Chargement des créneaux...</p>
                         </div>
                       ) : availableSlots.length > 0 ? (
                         <>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {availableSlots.map((slot) => {
-                              const slotKey = `${slot.start}-${slot.end}`;
+                              const slotKey = `${slot.start}-${slot.end}-${slot.duration}`;
                               return (
                                 <Button
                                   key={slotKey}
                                   type="button"
                                   variant={selectedTimeSlot === slotKey ? "default" : "outline"}
                                   className="w-full h-auto py-4 flex flex-col items-center justify-center"
-                                  onClick={() => handleTimeSlotSelect(slotKey)}
+                                  onClick={() => handleTimeSlotSelect(slot)}
                                 >
                                   <div className="text-lg font-semibold">
                                     {slot.start} - {slot.end}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-1">
-                                    Durée: {watchDuration}
+                                    Durée: {slot.duration}
                                   </div>
                                 </Button>
                               );
@@ -502,8 +481,8 @@ export default function Booking() {
                       ) : (
                         <Alert>
                           <AlertDescription>
-                            Aucune plage horaire disponible pour cette date avec une durée de {watchDuration}. 
-                            Veuillez choisir une autre date ou une durée différente.
+                            Aucun créneau disponible pour cette date. 
+                            Veuillez choisir une autre date.
                           </AlertDescription>
                         </Alert>
                       )}
