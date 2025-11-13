@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import type { Booking } from "@shared/schema";
 import fs from "fs";
 import path from "path";
@@ -74,17 +74,15 @@ function fillTemplate(template: string, booking: Booking): string {
 }
 
 export async function sendBookingConfirmation(booking: Booking): Promise<void> {
-  const emailUser = process.env.EMAIL_USER;
-  const emailPass = process.env.EMAIL_PASS;
+  const resendApiKey = process.env.RESEND_API_KEY;
   const adminEmail = "tutoratreussite@gmail.com";
   
   console.log("📧 Email configuration check:");
-  console.log("  EMAIL_USER:", emailUser ? "✓ Set" : "✗ Missing");
-  console.log("  EMAIL_PASS:", emailPass ? "✓ Set" : "✗ Missing");
+  console.log("  RESEND_API_KEY:", resendApiKey ? "✓ Set" : "✗ Missing");
   console.log("  Admin Email:", adminEmail);
   
-  if (!emailUser || !emailPass) {
-    const errorMsg = "⚠️  Email credentials not configured. EMAIL_USER and EMAIL_PASS environment variables are required.";
+  if (!resendApiKey) {
+    const errorMsg = "⚠️  Email credentials not configured. RESEND_API_KEY environment variable is required.";
     console.error(errorMsg);
     console.log("📋 Booking details:", {
       name: `${booking.firstName} ${booking.lastName}`,
@@ -98,57 +96,38 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
     throw new Error(errorMsg);
   }
 
-  console.log("📧 Creating email transporter...");
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: emailUser,
-      pass: emailPass,
-    },
-  });
-
-  // Verify transporter configuration
-  try {
-    await transporter.verify();
-    console.log("✅ Email transporter verified successfully");
-  } catch (verifyError) {
-    console.error("❌ Email transporter verification failed:", verifyError);
-    throw new Error(`Email configuration is invalid: ${verifyError}`);
-  }
+  console.log("📧 Initializing Resend email service...");
+  const resend = new Resend(resendApiKey);
 
   // Load and fill template
   console.log("📝 Loading email template...");
   const template = loadEmailTemplate();
   const emailHtml = fillTemplate(template, booking);
-  
-  // Send to client
-  const clientMailOptions = {
-    from: `TutoratRéussite <${emailUser}>`,
-    to: booking.email,
-    subject: "✅ Confirmation de réservation - TutoratRéussite",
-    html: emailHtml,
-  };
-
-  // Send to admin (tutoratreussite@gmail.com)
-  const adminMailOptions = {
-    from: `TutoratRéussite <${emailUser}>`,
-    to: adminEmail,
-    subject: `📚 Nouvelle réservation - ${booking.firstName} ${booking.lastName}`,
-    html: emailHtml,
-  };
 
   try {
-    console.log("📤 Sending emails...");
-    // Send both emails
-    await Promise.all([
-      transporter.sendMail(clientMailOptions),
-      transporter.sendMail(adminMailOptions)
-    ]);
+    console.log("📤 Sending emails via Resend...");
     
-    console.log("✅ Confirmation email sent successfully to:", booking.email);
-    console.log("✅ Admin notification sent successfully to:", adminEmail);
+    // Send to client
+    const clientEmail = await resend.emails.send({
+      from: 'TutoratRéussite <onboarding@resend.dev>', // Change this after domain verification
+      to: booking.email,
+      subject: "✅ Confirmation de réservation - TutoratRéussite",
+      html: emailHtml,
+    });
+
+    console.log("✅ Confirmation email sent to client:", booking.email, "ID:", clientEmail.data?.id);
+
+    // Send to admin
+    const adminEmailResult = await resend.emails.send({
+      from: 'TutoratRéussite <onboarding@resend.dev>', // Change this after domain verification
+      to: adminEmail,
+      subject: `📚 Nouvelle réservation - ${booking.firstName} ${booking.lastName}`,
+      html: emailHtml,
+    });
+
+    console.log("✅ Admin notification sent to:", adminEmail, "ID:", adminEmailResult.data?.id);
   } catch (error) {
-    console.error("❌ Error sending email:", error);
+    console.error("❌ Error sending email via Resend:", error);
     console.error("❌ Error details:", JSON.stringify(error, null, 2));
     throw error;
   }
