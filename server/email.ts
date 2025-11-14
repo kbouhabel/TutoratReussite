@@ -109,7 +109,7 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
     
     // Send to client
     const clientEmail = await resend.emails.send({
-      from: 'TutoratRéussite <onboarding@resend.dev>',
+      from: 'TutoratRéussite <contact@mail.tutoratreussite.online>',
       replyTo: 'tutoratreussite@gmail.com',
       to: booking.email,
       subject: "✅ Confirmation de réservation - TutoratRéussite",
@@ -132,7 +132,7 @@ export async function sendBookingConfirmation(booking: Booking): Promise<void> {
 
     // Send to admin
     const adminEmailResult = await resend.emails.send({
-      from: 'TutoratRéussite <onboarding@resend.dev>',
+      from: 'TutoratRéussite <contact@mail.tutoratreussite.online>',
       replyTo: 'tutoratreussite@gmail.com',
       to: adminEmail,
       subject: `📚 Nouvelle réservation - ${booking.firstName} ${booking.lastName}`,
