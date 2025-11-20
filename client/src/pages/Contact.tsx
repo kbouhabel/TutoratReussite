@@ -96,13 +96,6 @@ export default function Contact() {
                 <h3 className="text-2xl font-bold">Questions fréquentes</h3>
                 <div className="grid md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto">
                   <div>
-                    <h4 className="font-semibold mb-2">Quelle est votre politique d'annulation ?</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Les cours peuvent être annulés ou reportés jusqu'à 24 heures avant le début
-                      sans frais.
-                    </p>
-                  </div>
-                  <div>
                     <h4 className="font-semibold mb-2">Proposez-vous des cours en ligne ?</h4>
                     <p className="text-sm text-muted-foreground">
                       Oui, nous offrons également des cours en ligne via visioconférence pour
@@ -116,10 +109,9 @@ export default function Contact() {
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-semibold mb-2">Puis-je essayer avant de m'abonner ?</h4>
+                    <h4 className="font-semibold mb-2">Ai-je droit à un cours d'essai gratuit  ?</h4>
                     <p className="text-sm text-muted-foreground">
-                      Absolument ! Vous pouvez réserver un premier cours à l'unité avant de
-                      choisir un forfait.
+                      Oui, appelez-nous au 438-455-9106 pour réserver une heure de tutorat gratuitement !
                     </p>
                   </div>
                 </div>

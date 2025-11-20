@@ -474,9 +474,7 @@ export default function Booking() {
                               );
                             })}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            💡 Les plages incluent automatiquement 30 min avant et après pour le déplacement
-                          </p>
+                          {/* Explanatory note removed as requested */}
                         </>
                       ) : (
                         <Alert>
